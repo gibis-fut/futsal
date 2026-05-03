@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1628">
+<title>Futsal Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;touch-action:manipulation}
+body{font-family:'Barlow Condensed',sans-serif;background:#0a1628;color:#fff;display:flex;flex-direction:column}
+:root{--green:#00c46a;--red:#e74c3c;--amber:#f39c12;--blue:#3498db;--card:#12233f;--card2:#1a2f50;--border:#2a4070}
+.app{display:flex;flex-direction:column;height:100vh;padding:8px;gap:6px}
+.top-bar{display:flex;align-items:center;gap:10px;height:56px;background:var(--card);border-radius:10px;padding:0 14px;border:1px solid var(--border);flex-shrink:0}
+.timer-display{font-family:'Barlow Condensed',sans-serif;font-size:2.8rem;font-weight:700;letter-spacing:2px;color:#fff;min-width:110px;text-align:center}
+.timer-display.running{color:var(--green)}
+.timer-display.paused{color:var(--amber)}
+.timer-display.ended{color:var(--red)}
+.half-badge{background:var(--blue);color:#fff;font-size:.8rem;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:1px;white-space:nowrap}
+.spacer{flex:1}
+.btn{border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.95rem;letter-spacing:.5px;cursor:pointer;transition:all .15s;padding:8px 16px;white-space:nowrap}
+.btn-green{background:var(--green);color:#000}
+.btn-green:hover{background:#00e07a}
+.btn-amber{background:var(--amber);color:#000}
+.btn-amber:hover{background:#f5a623}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:#c0392b}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-blue:hover{background:#2980b9}
+.btn-gray{background:#2a4070;color:#aac}
+.btn-gray:hover{background:#3a5090}
+.btn-outline{background:transparent;color:#aac;border:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:.95rem;border-radius:8px;padding:8px 16px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-outline:hover{background:var(--card2)}
+.btn:active,.btn-outline:active{transform:scale(.96)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.field-area{display:flex;gap:6px;flex:1;min-height:0}
+.field-panel{flex:1;background:var(--card);border-radius:10px;border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.panel-title{font-size:.6rem;font-weight:700;letter-spacing:2px;color:#5a7ab0;padding:6px 12px 2px;text-transform:uppercase;flex-shrink:0}
+.players-grid{display:flex;flex-direction:column;gap:5px;padding:6px 8px;flex:1;overflow:hidden}
+.player-card{background:var(--card2);border-radius:8px;border:2px solid transparent;display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;transition:border-color .1s,box-shadow .1s;flex:1;min-height:0;touch-action:manipulation}
+.player-card.on-field{border-color:var(--green)}
+.player-card.selected-out{border-color:var(--red)!important;box-shadow:0 0 0 2px rgba(231,76,60,.35)}
+.bench-card.selected-in{border-color:var(--green)!important;box-shadow:0 0 0 2px rgba(0,196,106,.35);background:#0d2a1a}
+.player-num{font-size:1.6rem;font-weight:800;min-width:34px;text-align:center;color:#7ab}
+.player-info{flex:1;min-width:0}
+.player-name{font-size:1.05rem;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player-time{font-size:.85rem;color:var(--green);font-weight:700;font-variant-numeric:tabular-nums}
+.player-entries{font-size:.7rem;color:#5a7ab0;white-space:nowrap}
+.bench-panel{width:190px;flex-shrink:0;background:var(--card);border-radius:10px;border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.bench-list{display:flex;flex-direction:column;gap:3px;padding:5px 7px;flex:1;overflow:hidden}
+.bench-card{background:var(--card2);border-radius:7px;border:2px solid transparent;display:flex;align-items:center;gap:7px;padding:6px 9px;cursor:pointer;transition:border-color .1s;flex:1;min-height:0;touch-action:manipulation}
+.bench-num{font-size:1.15rem;font-weight:800;color:#7ab;min-width:26px;text-align:center}
+.bench-name{font-size:.9rem;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bench-time{font-size:.72rem;color:#5a7ab0;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sub-bar{background:var(--card);border-radius:10px;border:1px solid var(--border);padding:6px 12px;display:flex;align-items:center;gap:10px;min-height:46px;flex-shrink:0}
+.sub-info{flex:1;font-size:.88rem;color:#aac;line-height:1.3}
+.sub-info strong{color:#fff}
+.msg-bar{background:#0d2a1a;border:1px solid var(--green);border-radius:8px;padding:5px 12px;font-size:.82rem;color:var(--green);font-weight:600;display:none;white-space:nowrap}
+.msg-bar.show{display:block}
+.msg-bar.err{background:#2a0a0a;border-color:var(--red);color:var(--red)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:100;padding:10px}
+.modal{background:#12233f;border:1px solid var(--border);border-radius:14px;padding:18px;width:100%;max-width:700px;max-height:92vh;overflow-y:auto}
+.modal h2{font-size:1.25rem;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:.8rem;color:#7ab;margin-bottom:12px}
+.roster-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
+.roster-row{display:flex;align-items:center;gap:8px;background:var(--card2);border-radius:8px;padding:8px 10px}
+.roster-num{font-size:1rem;font-weight:800;color:#7ab;min-width:26px;text-align:center}
+.roster-input{background:transparent;border:none;border-bottom:1px solid var(--border);color:#fff;font-family:'Barlow Condensed',sans-serif;font-size:1rem;font-weight:600;width:100%;outline:none;padding:2px 4px}
+.roster-input:focus{border-bottom-color:var(--green)}
+.roster-input::placeholder{color:#3a5070}
+.timer-options{display:flex;gap:12px;margin:14px 0}
+.timer-option{flex:1;background:var(--card2);border:2px solid var(--border);border-radius:12px;padding:18px 10px;text-align:center;cursor:pointer;transition:all .15s;touch-action:manipulation}
+.timer-option:hover{border-color:#3a6090}
+.timer-option.selected{border-color:var(--green);background:#0d2a1a}
+.timer-option .mins{font-size:2.4rem;font-weight:800;color:#fff}
+.timer-option .label{font-size:.8rem;color:#7ab;margin-top:4px}
+.chart-bars{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+.chart-row{display:flex;align-items:center;gap:8px}
+.chart-label{min-width:120px;font-size:.85rem;font-weight:600;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chart-bar-wrap{flex:1;height:22px;background:#1a2f50;border-radius:4px;overflow:hidden}
+.bar-play{background:var(--green);height:100%;transition:width .6s ease}
+.chart-val{font-size:.75rem;color:var(--green);min-width:95px;white-space:nowrap}
+.chart-entries{font-size:.8rem;color:var(--amber);min-width:36px;text-align:right;font-weight:700}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;align-items:center}
+/* AUTOSAVE */
+.save-dot{width:8px;height:8px;border-radius:50%;background:#2a4070;display:inline-block;margin-left:6px;transition:background .4s}
+.save-dot.saving{background:var(--amber)}
+.save-dot.saved{background:var(--green)}
+/* RESTORE MODAL */
+.restore-modal{max-width:420px;text-align:center}
+.restore-modal h2{margin-bottom:10px}
+.restore-modal p{font-size:.9rem;color:#aac;margin-bottom:6px;line-height:1.5}
+.restore-modal .restore-meta{font-size:.8rem;color:#5a7ab0;margin-bottom:16px}
+.restore-btns{display:flex;gap:10px;justify-content:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top-bar">
+    <div class="timer-display paused" id="timerDisplay">--:--</div>
+    <div class="half-badge" id="halfBadge">1° TEMPO</div>
+    <div class="spacer"></div>
+    <div id="msgBar" class="msg-bar"></div>
+    <span id="saveDot" class="save-dot" title="Salvataggio automatico"></span>
+    <button class="btn btn-green" id="btnStart" onclick="toggleTimer()" disabled>▶ AVVIA</button>
+    <button class="btn btn-amber" id="btnNextHalf" onclick="nextHalf()" style="display:none">FINE TEMPO →</button>
+    <button class="btn btn-gray" onclick="showRoster()">✎ ROSA</button>
+  </div>
+  <div class="field-area">
+    <div class="field-panel">
+      <div class="panel-title">⬤ In Campo</div>
+      <div class="players-grid" id="fieldGrid"></div>
+    </div>
+    <div class="bench-panel">
+      <div class="panel-title">Panchina</div>
+      <div class="bench-list" id="benchList"></div>
+    </div>
+  </div>
+  <div class="sub-bar">
+    <div class="sub-info" id="subInfo">Imposta la rosa per iniziare → tocca ✎ ROSA</div>
+    <button class="btn btn-green" id="btnConfirmSub" onclick="confirmSub()" style="display:none">✔ CONFERMA</button>
+    <button class="btn btn-gray" id="btnCancelSub" onclick="cancelSub()" style="display:none">✕ ANNULLA</button>
+    <button class="btn btn-red" id="btnEndGame" onclick="endGame()" style="display:none">FINE PARTITA</button>
+  </div>
+</div>
+
+<!-- STEP 1: ROSTER -->
+<div class="modal-overlay" id="rosterModal" style="display:none">
+  <div class="modal">
+    <h2>✎ Passo 1 — Imposta la Rosa</h2>
+    <p class="modal-sub">Inserisci i nomi dei convocati (max 12). I primi 5 partiranno in campo. Una volta confermata la rosa sarà bloccata.</p>
+    <div class="roster-grid" id="rosterGrid"></div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeRoster()">Annulla</button>
+      <button class="btn btn-green" onclick="goToTimerPicker()">Avanti → Imposta Timer</button>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2: TIMER DURATION -->
+<div class="modal-overlay" id="timerModal" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <h2>⏱ Passo 2 — Durata di ogni Tempo</h2>
+    <p class="modal-sub">Scegli la durata del conto alla rovescia per ciascun tempo di gioco.</p>
+    <div class="timer-options">
+      <div class="timer-option" id="topt5" onclick="selectDuration(5)">
+        <div class="mins">5'</div>
+        <div class="label">minuti</div>
+      </div>
+      <div class="timer-option" id="topt10" onclick="selectDuration(10)">
+        <div class="mins">10'</div>
+        <div class="label">minuti</div>
+      </div>
+      <div class="timer-option selected" id="topt20" onclick="selectDuration(20)">
+        <div class="mins">20'</div>
+        <div class="label">minuti</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="backToRoster()">← Indietro</button>
+      <button class="btn btn-green" onclick="confirmSetup()">✔ Conferma e Inizia</button>
+    </div>
+  </div>
+</div>
+
+<!-- STATS / CHART -->
+<div class="modal-overlay" id="chartModal" style="display:none">
+  <div class="modal" style="max-width:760px">
+    <h2 id="chartTitle">Statistiche</h2>
+    <div style="display:flex;gap:4px;margin-bottom:6px;font-size:.7rem;color:#5a7ab0">
+      <div style="min-width:120px"></div>
+      <div style="flex:1;padding-left:4px">barra tempo giocato</div>
+      <div style="min-width:95px;color:var(--green)">giocato / panchina</div>
+      <div style="min-width:36px;text-align:right;color:var(--amber)">ent.</div>
+    </div>
+    <div class="chart-bars" id="chartBars"></div>
+    <div class="modal-footer">
+      <button class="btn btn-blue" id="btnSecondHalf" onclick="startSecondHalf()" style="display:none">▶ INIZIA 2° TEMPO</button>
+      <div id="exportGroup" style="display:none;gap:8px;align-items:center">
+        <button class="btn-outline" onclick="exportTxt()">⬇ Esporta TXT</button>
+        <button class="btn btn-green" onclick="exportPdf()">⬇ Esporta PDF</button>
+      </div>
+      <button class="btn btn-gray" onclick="closeChart()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESTORE SESSION MODAL -->
+<div class="modal-overlay" id="restoreModal" style="display:none">
+  <div class="modal restore-modal">
+    <h2>💾 Partita in corso trovata</h2>
+    <p>È stato trovato un salvataggio automatico di una partita non completata.</p>
+    <div class="restore-meta" id="restoreMeta"></div>
+    <div class="restore-btns">
+      <button class="btn btn-gray" onclick="discardSave()">✕ Scarta</button>
+      <button class="btn btn-green" onclick="restoreSave()">↩ Ripristina Partita</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+var MAX_PLAYERS = 12;
+var players = [];
+var timerInterval = null;
+var halfDuration = 20*60;
+var timeLeft = 20*60;
+var running = false;
+var half = 1;
+var gameStarted = false;
+var rosterLocked = false;
+var selectedOut = null;
+var selectedIn = null;
+var lastTick = null;
+var renderPending = false;
+var selectedDuration = 20;
+var tempNames = [];
+var autosaveInterval = null;
+var SAVE_KEY = 'futsal_autosave';
+
+/* ===== SWIPE BLOCK ===== */
+(function(){
+  var touchStartX = 0;
+  var touchStartY = 0;
+  document.addEventListener('touchstart', function(e){
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener('touchmove', function(e){
+    if(!e.cancelable) return;
+    var dx = Math.abs(e.touches[0].clientX - touchStartX);
+    var dy = Math.abs(e.touches[0].clientY - touchStartY);
+    // block horizontal swipe when it's clearly more horizontal than vertical
+    if(dx > dy && dx > 12) {
+      e.preventDefault();
+    }
+  }, {passive:false});
+  // Block browser back/forward history navigation gestures
+  window.addEventListener('popstate', function(e){
+    history.pushState(null, '', window.location.href);
+  });
+  history.pushState(null, '', window.location.href);
+})();
+
+/* ===== AUTOSAVE ===== */
+function getState(){
+  return {
+    players: players.map(function(p){return {
+      id:p.id,num:p.num,name:p.name,onField:p.onField,
+      playTime:p.playTime,entries:p.entries,fieldSince:p.fieldSince
+    };}),
+    timeLeft: timeLeft,
+    halfDuration: halfDuration,
+    half: half,
+    gameStarted: gameStarted,
+    rosterLocked: rosterLocked,
+    running: false, // always save as paused
+    savedAt: Date.now()
+  };
+}
+
+function autosave(){
+  if(!gameStarted) return;
+  // snapshot current on-field time up to now before saving
+  var snap = getState();
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(snap));
+    var dot = document.getElementById('saveDot');
+    dot.className = 'save-dot saving';
+    clearTimeout(dot._t);
+    dot._t = setTimeout(function(){ dot.className = 'save-dot saved'; }, 500);
+  } catch(e){}
+}
+
+function clearSave(){
+  try { localStorage.removeItem(SAVE_KEY); } catch(e){}
+  var dot = document.getElementById('saveDot');
+  if(dot) dot.className = 'save-dot';
+}
+
+function startAutosave(){
+  clearInterval(autosaveInterval);
+  autosaveInterval = setInterval(autosave, 5000); // every 5 seconds
+}
+
+function checkRestore(){
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return;
+    var state = JSON.parse(raw);
+    if(!state || !state.gameStarted || !state.players) return;
+    var ago = Math.round((Date.now() - state.savedAt) / 60000);
+    var meta = 'Tempo: ' + half_label(state.half) +
+      '  |  Timer: ' + fmt_static(state.timeLeft) +
+      '  |  Salvato ' + (ago < 1 ? 'pochi secondi' : ago + ' min') + ' fa';
+    document.getElementById('restoreMeta').textContent = meta;
+    document.getElementById('restoreModal').style.display = 'flex';
+  } catch(e){}
+}
+
+function half_label(h){ return h === 1 ? '1° Tempo' : '2° Tempo'; }
+function fmt_static(s){
+  s=Math.max(0,Math.round(s));
+  return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+
+function restoreSave(){
+  try {
+    var raw = localStorage.getItem(SAVE_KEY);
+    var state = JSON.parse(raw);
+    players = state.players;
+    timeLeft = state.timeLeft;
+    halfDuration = state.halfDuration;
+    half = state.half;
+    gameStarted = state.gameStarted;
+    rosterLocked = state.rosterLocked;
+    selectedDuration = halfDuration / 60;
+    selectedOut = null; selectedIn = null;
+    document.getElementById('restoreModal').style.display = 'none';
+    document.getElementById('halfBadge').textContent = half === 1 ? '1° TEMPO' : '2° TEMPO';
+    document.getElementById('timerDisplay').textContent = fmt(Math.ceil(timeLeft));
+    document.getElementById('timerDisplay').className = 'timer-display paused';
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStart').textContent = '▶ RIPRENDI';
+    document.getElementById('btnStart').className = 'btn btn-green';
+    if(half === 2) document.getElementById('btnEndGame').style.display = 'inline-block';
+    document.getElementById('subInfo').innerHTML = 'Partita ripristinata — tap su un giocatore per sostituirlo';
+    render();
+    startAutosave();
+    showMsg('✔ Partita ripristinata correttamente!', false);
+  } catch(e){
+    showMsg('Errore nel ripristino, dati corrotti', true);
+    clearSave();
+    document.getElementById('restoreModal').style.display = 'none';
+  }
+}
+
+function discardSave(){
+  clearSave();
+  document.getElementById('restoreModal').style.display = 'none';
+}
+
+function initPlayers(names) {
+  players = names.map(function(n,i){
+    return {id:i,num:i+1,name:n||('G.'+(i+1)),onField:i<5,playTime:0,entries:i<5?1:0,fieldSince:i<5?0:null};
+  });
+}
+
+function fmt(s){
+  s=Math.max(0,Math.round(s));
+  return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+
+function elapsed(){return halfDuration-timeLeft;}
+
+function getPlayTime(p){
+  return (p.onField&&p.fieldSince!==null)?p.playTime+(elapsed()-p.fieldSince):p.playTime;
+}
+
+function toggleTimer(){if(!gameStarted)return;if(running)pauseTimer();else startTimer();}
+
+function startTimer(){
+  running=true;lastTick=Date.now();
+  document.getElementById('timerDisplay').className='timer-display running';
+  document.getElementById('btnStart').textContent='⏸ PAUSA';
+  document.getElementById('btnStart').className='btn btn-amber';
+  timerInterval=setInterval(tick,150);
+}
+
+function pauseTimer(){
+  running=false;clearInterval(timerInterval);
+  document.getElementById('timerDisplay').className='timer-display paused';
+  document.getElementById('btnStart').textContent='▶ RIPRENDI';
+  document.getElementById('btnStart').className='btn btn-green';
+  render();
+}
+
+function tick(){
+  var now=Date.now();
+  timeLeft=Math.max(0,timeLeft-(now-lastTick)/1000);
+  lastTick=now;
+  document.getElementById('timerDisplay').textContent=fmt(Math.ceil(timeLeft));
+  if(timeLeft<=0){
+    clearInterval(timerInterval);running=false;
+    document.getElementById('timerDisplay').className='timer-display ended';
+    document.getElementById('timerDisplay').textContent='00:00';
+    document.getElementById('btnStart').disabled=true;
+    document.getElementById('btnNextHalf').style.display='inline-block';
+    render();showMsg('⏱ Tempo scaduto! Premi "Fine Tempo" per le statistiche.',false);return;
+  }
+  if(!renderPending){renderPending=true;requestAnimationFrame(function(){renderPending=false;renderTimes();});}
+}
+
+function render(){
+  var field=players.filter(function(p){return p.onField;});
+  var bench=players.filter(function(p){return !p.onField;});
+  var fh='';
+  field.forEach(function(p){
+    var pt=getPlayTime(p);
+    var cls='player-card on-field'+(selectedOut&&selectedOut.id===p.id?' selected-out':'');
+    fh+='<div class="'+cls+'" ontouchstart="" onclick="selectOut('+p.id+')">'+
+      '<div class="player-num">'+p.num+'</div>'+
+      '<div class="player-info">'+
+        '<div class="player-name">'+esc(p.name)+'</div>'+
+        '<div class="player-time" id="pt_'+p.id+'">▶ '+fmt(pt)+'</div>'+
+      '</div>'+
+      '<div class="player-entries">'+p.entries+'x in</div>'+
+    '</div>';
+  });
+  document.getElementById('fieldGrid').innerHTML=fh;
+  var bh='';
+  bench.forEach(function(p){
+    var pt=getPlayTime(p);
+    var cls='bench-card'+(selectedIn&&selectedIn.id===p.id?' selected-in':'');
+    bh+='<div class="'+cls+'" ontouchstart="" onclick="selectIn('+p.id+')">'+
+      '<div class="bench-num">'+p.num+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div class="bench-name">'+esc(p.name)+'</div>'+
+        '<div class="bench-time" id="pt_'+p.id+'">'+fmt(pt)+'</div>'+
+      '</div>'+
+    '</div>';
+  });
+  document.getElementById('benchList').innerHTML=bh;
+}
+
+function renderTimes(){
+  players.forEach(function(p){
+    var el=document.getElementById('pt_'+p.id);
+    if(!el)return;
+    var pt=getPlayTime(p);
+    el.textContent=p.onField?('▶ '+fmt(pt)):fmt(pt);
+  });
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function selectOut(id){
+  if(!gameStarted)return;
+  if(selectedOut&&selectedOut.id===id){selectedOut=null;selectedIn=null;updateSubBar();render();return;}
+  selectedOut=players.find(function(p){return p.id===id;});
+  selectedIn=null;updateSubBar();render();
+}
+
+function selectIn(id){
+  if(!selectedOut){showMsg('Prima seleziona chi esce dal campo',true);return;}
+  if(selectedIn&&selectedIn.id===id){selectedIn=null;updateSubBar();render();return;}
+  selectedIn=players.find(function(p){return p.id===id;});
+  updateSubBar();render();
+}
+
+function updateSubBar(){
+  var info=document.getElementById('subInfo');
+  var btnC=document.getElementById('btnConfirmSub');
+  var btnX=document.getElementById('btnCancelSub');
+  if(!selectedOut&&!selectedIn){
+    info.innerHTML='Tap su un giocatore in campo per sostituirlo, poi uno dalla panchina per farlo entrare';
+    btnC.style.display='none';btnX.style.display='none';
+  }else if(selectedOut&&!selectedIn){
+    info.innerHTML='<strong style="color:var(--red)">ESCE: '+esc(selectedOut.name)+'</strong> &nbsp;—&nbsp; ora seleziona chi entra dalla panchina';
+    btnC.style.display='none';btnX.style.display='inline-block';
+  }else{
+    info.innerHTML='<strong style="color:var(--red)">ESCE: '+esc(selectedOut.name)+'</strong> → <strong style="color:var(--green)">ENTRA: '+esc(selectedIn.name)+'</strong>';
+    btnC.style.display='inline-block';btnX.style.display='inline-block';
+  }
+}
+
+function confirmSub(){
+  if(!selectedOut||!selectedIn)return;
+  var e=elapsed();
+  var pOut=players.find(function(p){return p.id===selectedOut.id;});
+  var pIn=players.find(function(p){return p.id===selectedIn.id;});
+  pOut.playTime+=e-pOut.fieldSince;pOut.onField=false;pOut.fieldSince=null;
+  pIn.onField=true;pIn.fieldSince=e;pIn.entries++;
+  showMsg('↔ '+pOut.name+'  →  '+pIn.name,false);
+  selectedOut=null;selectedIn=null;updateSubBar();render();
+  autosave(); // immediate save after substitution
+}
+
+function cancelSub(){selectedOut=null;selectedIn=null;updateSubBar();render();}
+
+function nextHalf(){
+  if(half===1){
+    players.forEach(function(p){
+      if(p.onField&&p.fieldSince!==null){p.playTime+=elapsed()-p.fieldSince;p.fieldSince=null;}
+    });
+    showChartModal(false);
+  }
+}
+
+function startSecondHalf(){
+  half=2;timeLeft=halfDuration;
+  document.getElementById('halfBadge').textContent='2° TEMPO';
+  document.getElementById('timerDisplay').className='timer-display paused';
+  document.getElementById('timerDisplay').textContent=fmt(halfDuration);
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStart').textContent='▶ AVVIA';
+  document.getElementById('btnStart').className='btn btn-green';
+  document.getElementById('btnNextHalf').style.display='none';
+  document.getElementById('btnEndGame').style.display='inline-block';
+  players.forEach(function(p){if(p.onField)p.fieldSince=0;});
+  document.getElementById('chartModal').style.display='none';
+  render();
+}
+
+function endGame(){
+  clearInterval(timerInterval);running=false;
+  clearInterval(autosaveInterval);
+  players.forEach(function(p){
+    if(p.onField&&p.fieldSince!==null){p.playTime+=elapsed()-p.fieldSince;p.fieldSince=null;}
+  });
+  clearSave();
+  showChartModal(true);
+}
+
+function showChartModal(isFinal){
+  var total=halfDuration*2;
+  var sorted=players.slice().sort(function(a,b){return b.playTime-a.playTime;});
+  var max=Math.max.apply(null,sorted.map(function(p){return p.playTime;}));
+  document.getElementById('chartTitle').textContent=isFinal?'📊 Statistiche Finali':'📊 Fine '+half+'° Tempo — '+fmt(halfDuration)+' per tempo';
+  var html='';
+  sorted.forEach(function(p){
+    var pct=max>0?(p.playTime/max)*100:0;
+    var bench=Math.max(0,total-p.playTime);
+    html+='<div class="chart-row">'+
+      '<div class="chart-label">'+p.num+'. '+esc(p.name)+'</div>'+
+      '<div class="chart-bar-wrap"><div class="bar-play" style="width:'+pct.toFixed(1)+'%"></div></div>'+
+      '<div class="chart-val"><span style="color:var(--green)">'+fmt(p.playTime)+'</span> <span style="color:#5a7ab0;font-size:.7rem">/ '+fmt(bench)+' panch.</span></div>'+
+      '<div class="chart-entries">'+p.entries+'x</div>'+
+    '</div>';
+  });
+  document.getElementById('chartBars').innerHTML=html;
+  document.getElementById('btnSecondHalf').style.display=isFinal?'none':'inline-block';
+  var eg=document.getElementById('exportGroup');
+  eg.style.display=isFinal?'flex':'none';
+  document.getElementById('chartModal').style.display='flex';
+}
+
+function closeChart(){document.getElementById('chartModal').style.display='none';}
+
+/* ===== EXPORT TXT ===== */
+function exportTxt(){
+  var total=halfDuration*2;
+  var date=new Date().toLocaleDateString('it-IT');
+  var mins=halfDuration/60;
+  var txt='STATISTICHE FUTSAL\n';
+  txt+='Data: '+date+'   |   Durata per tempo: '+mins+' min   |   Totale: '+(mins*2)+' min\n';
+  txt+='='.repeat(56)+'\n\n';
+  txt+=pad('Giocatore',22)+pad('Giocato',10)+pad('Panchina',10)+pad('Tot.Gara',10)+'Entrate\n';
+  txt+='-'.repeat(56)+'\n';
+  var sorted=players.slice().sort(function(a,b){return b.playTime-a.playTime;});
+  sorted.forEach(function(p){
+    var bench=Math.max(0,total-p.playTime);
+    txt+=pad(p.num+'. '+p.name,22)+pad(fmt(p.playTime),10)+pad(fmt(bench),10)+pad(fmt(total),10)+p.entries+'\n';
+  });
+  txt+='\n'+'='.repeat(56)+'\n';
+  var blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');a.href=url;a.download='futsal_statistiche.txt';a.click();
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+
+function pad(s,n){s=String(s);while(s.length<n)s+=' ';return s.substring(0,n);}
+
+/* ===== EXPORT PDF ===== */
+function exportPdf(){
+  if(typeof window.jspdf==='undefined'){showMsg('Libreria PDF non caricata, riprova',true);return;}
+  var jsPDF=window.jspdf.jsPDF;
+  var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  var total=halfDuration*2;
+  var date=new Date().toLocaleDateString('it-IT');
+  var mins=halfDuration/60;
+  var margin=16;var pageW=210;var y=22;
+  var cols=[14,62,26,26,26,16];
+  var headers=['N.','Giocatore','Giocato','Panchina','Tot.Gara','Ent.'];
+
+  // Header block
+  doc.setFillColor(10,22,40);
+  doc.rect(0,0,pageW,28,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.setTextColor(0,196,106);
+  doc.text('FUTSAL TRACKER',margin,13);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.setTextColor(130,160,200);
+  doc.text('Statistiche di Gara  |  Data: '+date+'  |  Durata per tempo: '+mins+' min  |  Totale: '+(mins*2)+' min',margin,21);
+  y=36;
+
+  // Table header
+  var rowH=8;
+  doc.setFillColor(18,35,63);
+  doc.rect(margin,y,pageW-margin*2,rowH,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(150,190,230);
+  var cx=margin;
+  headers.forEach(function(h,i){
+    if(i===1)doc.text(h,cx+2,y+5.5);
+    else doc.text(h,cx+cols[i]/2,y+5.5,{align:'center'});
+    cx+=cols[i];
+  });
+  y+=rowH;
+
+  // Data rows
+  var sorted=players.slice().sort(function(a,b){return b.playTime-a.playTime;});
+  sorted.forEach(function(p,idx){
+    var bench=Math.max(0,total-p.playTime);
+    var vals=[String(p.num),p.name,fmt(p.playTime),fmt(bench),fmt(total),String(p.entries)];
+    var fill=idx%2===0?[26,47,80]:[20,38,65];
+    doc.setFillColor(fill[0],fill[1],fill[2]);
+    doc.rect(margin,y,pageW-margin*2,rowH,'F');
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(215,230,248);
+    var cx2=margin;
+    vals.forEach(function(v,i){
+      if(i===1)doc.text(String(v).substring(0,24),cx2+2,y+5.5);
+      else doc.text(v,cx2+cols[i]/2,y+5.5,{align:'center'});
+      cx2+=cols[i];
+    });
+    // mini progress bar for play time
+    var maxPt=sorted[0].playTime||1;
+    var barMax=cols[2]-4;
+    var barW=Math.round((p.playTime/maxPt)*barMax);
+    if(barW>0){
+      doc.setFillColor(0,196,106);
+      doc.rect(margin+cols[0]+cols[1]+2,y+rowH-2,barW,1.2,'F');
+    }
+    y+=rowH;
+  });
+
+  // Footer
+  y+=5;
+  doc.setDrawColor(42,64,112);doc.setLineWidth(0.3);
+  doc.line(margin,y,pageW-margin,y);
+  y+=5;doc.setFontSize(7.5);doc.setTextColor(80,110,150);
+  doc.text('Generato da Futsal Tracker — '+new Date().toLocaleString('it-IT'),margin,y);
+
+  doc.save('futsal_statistiche.pdf');
+}
+
+/* ===== SETUP FLOW ===== */
+function showRoster(){
+  if(rosterLocked){showMsg('Rosa bloccata durante la partita',true);return;}
+  var html='';
+  for(var i=0;i<MAX_PLAYERS;i++){
+    var name=(players[i]&&players[i].name&&!players[i].name.startsWith('G.'))?players[i].name:'';
+    html+='<div class="roster-row">'+
+      '<div class="roster-num">'+(i+1)+'</div>'+
+      '<input class="roster-input" id="r'+i+'" placeholder="Nome giocatore" value="'+esc(name)+'" maxlength="20">'+
+    '</div>';
+  }
+  document.getElementById('rosterGrid').innerHTML=html;
+  document.getElementById('rosterModal').style.display='flex';
+  setTimeout(function(){var el=document.getElementById('r0');if(el)el.focus();},120);
+}
+
+function closeRoster(){document.getElementById('rosterModal').style.display='none';}
+
+function goToTimerPicker(){
+  var names=[];var hasName=false;
+  for(var i=0;i<MAX_PLAYERS;i++){
+    var v=document.getElementById('r'+i).value.trim();
+    names.push(v||('G.'+(i+1)));if(v)hasName=true;
+  }
+  if(!hasName){showMsg('Inserisci almeno un nome prima di continuare',true);return;}
+  tempNames=names;
+  document.getElementById('rosterModal').style.display='none';
+  selectDuration(selectedDuration);
+  document.getElementById('timerModal').style.display='flex';
+}
+
+function backToRoster(){
+  document.getElementById('timerModal').style.display='none';
+  document.getElementById('rosterModal').style.display='flex';
+}
+
+function selectDuration(mins){
+  selectedDuration=mins;
+  [5,10,20].forEach(function(m){
+    var el=document.getElementById('topt'+m);
+    if(el)el.className='timer-option'+(m===mins?' selected':'');
+  });
+}
+
+function confirmSetup(){
+  halfDuration=selectedDuration*60;timeLeft=halfDuration;
+  initPlayers(tempNames);
+  rosterLocked=true;gameStarted=true;
+  document.getElementById('timerModal').style.display='none';
+  document.getElementById('timerDisplay').textContent=fmt(halfDuration);
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStart').textContent='▶ AVVIA';
+  document.getElementById('btnStart').className='btn btn-green';
+  render();
+  document.getElementById('subInfo').innerHTML='Tap su un giocatore in campo per sostituirlo, poi uno dalla panchina per farlo entrare';
+  startAutosave();
+  showMsg('✔ Tutto pronto! Avvia il timer quando sei pronto.',false);
+}
+
+function showMsg(msg,isErr){
+  var bar=document.getElementById('msgBar');
+  bar.textContent=msg;
+  bar.className='msg-bar show'+(isErr?' err':'');
+  clearTimeout(bar._t);
+  bar._t=setTimeout(function(){bar.className='msg-bar';},2800);
+}
+
+initPlayers(Array(MAX_PLAYERS).fill(''));
+render();
+checkRestore();
+</script>
+</body>
+</html>
